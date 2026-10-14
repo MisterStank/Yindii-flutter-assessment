@@ -17,7 +17,13 @@ class DealDetailsController extends GetxController {
     required this.analytics,
   });
 
-  late final DealModel deal;
+  /// From the route's `?id=`; `arguments` is only an optional preloaded copy.
+  late final int? dealId;
+
+  final _deal = Rxn<DealModel>();
+  DealModel? get deal => _deal.value;
+
+  final loadFailed = false.obs;
 
   final _quantityLeft = RxnInt();
   int? get quantityLeft => _quantityLeft.value;
@@ -25,10 +31,16 @@ class DealDetailsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    deal = Get.arguments as DealModel;
-    _quantityLeft.value = deal.quantityLeft;
+    final preloaded = Get.arguments;
+    if (preloaded is DealModel) {
+      dealId = preloaded.id;
+      _setDeal(preloaded);
+    } else {
+      dealId = int.tryParse(Get.parameters['id'] ?? '');
+      loadDeal();
+    }
     analytics.logEvent('deal_details_view', {
-      'deal_id': deal.id,
+      'deal_id': dealId,
       'source': Get.parameters['source'] ?? 'unknown',
     });
     // Whenever the cart changes, re-check this deal's remaining stock so the
@@ -36,13 +48,37 @@ class DealDetailsController extends GetxController {
     ever(cartService.itemCount, (_) => _recheckAvailability());
   }
 
+  Future<void> loadDeal() async {
+    final id = dealId;
+    if (id == null) {
+      loadFailed.value = true;
+      return;
+    }
+    loadFailed.value = false;
+    try {
+      _setDeal(await dealRepo.fetchById(id));
+    } catch (e) {
+      LogService.error('load deal $id failed', e);
+      loadFailed.value = true;
+    }
+  }
+
+  void _setDeal(DealModel deal) {
+    _deal.value = deal;
+    _quantityLeft.value = deal.quantityLeft;
+  }
+
   Future<void> _recheckAvailability() async {
-    LogService.log('re-checking availability for deal ${deal.id}');
-    final fresh = await dealRepo.fetchById(deal.id);
+    final id = dealId;
+    if (id == null) return;
+    LogService.log('re-checking availability for deal $id');
+    final fresh = await dealRepo.fetchById(id);
     _quantityLeft.value = fresh.quantityLeft;
   }
 
   void addToCart() {
+    final deal = this.deal;
+    if (deal == null) return;
     cartService.add(deal);
     Get.snackbar(
       'Added to bag',
