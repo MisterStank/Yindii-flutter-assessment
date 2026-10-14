@@ -66,6 +66,8 @@ class HomeController extends GetxController {
     _totalPages = res.totalPages;
     deals.assignAll(res.items);
     refreshController.refreshCompleted();
+    // A discarded page load never completes the footer, and "no more" is stale.
+    refreshController.loadComplete();
   }
 
   Future<void> loadMore() async {
