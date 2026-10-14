@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../../model/deal_model.dart';
@@ -9,28 +11,45 @@ class SearchDealsController extends GetxController {
 
   SearchDealsController({required this.dealRepo});
 
+  static const debounceDuration = Duration(milliseconds: 300);
+
   final results = <DealModel>[].obs;
   final isLoading = false.obs;
   final hasSearched = false.obs;
 
+  Timer? _debounce;
+  int _latestRequest = 0;
+
   void onQueryChanged(String query) {
-    _search(query);
+    _debounce?.cancel();
+    _debounce = Timer(debounceDuration, () => search(query));
   }
 
-  Future<void> _search(String query) async {
+  Future<void> search(String query) async {
+    // Responses can arrive out of order; only the latest request may apply.
+    final request = ++_latestRequest;
     if (query.trim().isEmpty) {
       results.clear();
       hasSearched.value = false;
+      isLoading.value = false;
       return;
     }
     isLoading.value = true;
     hasSearched.value = true;
     try {
       final found = await dealRepo.search(query);
+      if (request != _latestRequest) return;
       results.assignAll(found);
     } catch (e) {
+      if (request != _latestRequest) return;
       LogService.error('search failed', e);
     }
     isLoading.value = false;
+  }
+
+  @override
+  void onClose() {
+    _debounce?.cancel();
+    super.onClose();
   }
 }
