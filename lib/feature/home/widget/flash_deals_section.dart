@@ -6,6 +6,7 @@ import '../../../model/deal_model.dart';
 import '../../../routes/routes.dart';
 import '../../shared_widget/flash_countdown.dart';
 import '../../shared_widget/flash_expiry_builder.dart';
+import '../../shared_widget/impression_tracker.dart';
 import '../../shared_widget/the_network_image.dart';
 
 /// Horizontal flash-sale rail with a live countdown per deal.
@@ -38,7 +39,13 @@ class FlashDealsSection extends StatelessWidget {
             itemCount: deals.length,
             itemBuilder: (context, index) {
               final deal = deals[index];
-              return _FlashDealTile(key: ValueKey(deal.id), deal: deal);
+              return ImpressionTracker(
+                key: ValueKey(deal.id),
+                dealId: deal.id,
+                source: 'flash_rail',
+                position: index,
+                child: _FlashDealTile(deal: deal),
+              );
             },
           ),
         ),
@@ -50,7 +57,7 @@ class FlashDealsSection extends StatelessWidget {
 class _FlashDealTile extends StatelessWidget {
   final DealModel deal;
 
-  const _FlashDealTile({super.key, required this.deal});
+  const _FlashDealTile({required this.deal});
 
   @override
   Widget build(BuildContext context) {
