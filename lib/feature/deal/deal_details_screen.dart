@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../../app_config.dart';
 import '../../model/deal_model.dart';
 import '../../routes/routes.dart';
+import '../shared_widget/flash_countdown.dart';
+import '../shared_widget/flash_expiry_builder.dart';
 import '../shared_widget/the_network_image.dart';
 import 'deal_details_controller.dart';
 
@@ -99,6 +101,29 @@ class DealDetailsScreen extends GetView<DealDetailsController> {
                           )),
                     ],
                   ),
+                  if (deal.isFlashSale) ...[
+                    const SizedBox(height: 8),
+                    FlashExpiryBuilder(
+                      endsAt: deal.flashSaleEndsAt,
+                      builder: (context, expired) => Row(
+                        children: [
+                          Icon(Icons.bolt,
+                              size: 18,
+                              color: expired ? Colors.grey : Colors.red),
+                          const SizedBox(width: 4),
+                          Text(
+                              expired
+                                  ? 'Flash sale ended'
+                                  : 'Flash sale ends in ',
+                              style: _flashStyle),
+                          if (!expired)
+                            FlashCountdownText(
+                                endsAt: deal.flashSaleEndsAt!,
+                                style: _flashStyle),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -169,13 +194,22 @@ class DealDetailsScreen extends GetView<DealDetailsController> {
         color: Colors.white,
         child: SizedBox(
           width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: controller.addToCart,
-            icon: const Icon(Icons.add_shopping_cart),
-            label: const Text('Add to bag'),
+          child: FlashExpiryBuilder(
+            endsAt: deal.flashSaleEndsAt,
+            builder: (context, expired) => FilledButton.icon(
+              onPressed: expired ? null : controller.addToCart,
+              icon: const Icon(Icons.add_shopping_cart),
+              label: Text(expired ? 'Flash sale ended' : 'Add to bag'),
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+const _flashStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: Colors.red,
+    fontFeatures: [FontFeature.tabularFigures()]);

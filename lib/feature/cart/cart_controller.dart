@@ -13,7 +13,14 @@ class CartController extends GetxController {
 
   final isCheckingOut = false.obs;
 
+  @override
+  void onInit() {
+    super.onInit();
+    cartService.expireOverdue();
+  }
+
   Future<void> checkout() async {
+    cartService.expireOverdue();
     if (cartService.items.isEmpty || isCheckingOut.value) return;
     isCheckingOut.value = true;
     try {
