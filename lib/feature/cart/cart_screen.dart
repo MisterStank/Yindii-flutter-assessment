@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app_config.dart';
+import '../../model/cart_item_model.dart';
 import '../../service/cart_service.dart';
+import '../../service/clock_service.dart';
+import '../shared_widget/flash_countdown.dart';
 import '../shared_widget/the_network_image.dart';
 import 'cart_controller.dart';
 
@@ -44,16 +47,31 @@ class CartScreen extends GetView<CartController> {
               ),
               const SizedBox(width: 24),
               Expanded(
-                child: FilledButton(
-                  onPressed: controller.isCheckingOut.value
-                      ? null
-                      : controller.checkout,
-                  child: controller.isCheckingOut.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Checkout'),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (cart.hasExpiredHolds)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 6),
+                        child: Text(
+                            'Re-reserve or remove expired items to check out',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12)),
+                      ),
+                    FilledButton(
+                      onPressed:
+                          controller.isCheckingOut.value || !cart.canCheckout
+                              ? null
+                              : controller.checkout,
+                      child: controller.isCheckingOut.value || cart.isReserving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('Checkout'),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -73,9 +91,11 @@ class CartScreen extends GetView<CartController> {
         itemCount: cart.items.length,
         itemBuilder: (context, index) {
           final item = cart.items[index];
+          final busy = item.status == HoldStatus.reserving;
+          final expired = item.status == HoldStatus.expired;
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            color: Colors.white,
+            color: expired ? Colors.grey.shade100 : Colors.white,
             elevation: 0.5,
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -105,6 +125,11 @@ class CartScreen extends GetView<CartController> {
                                 fontSize: 13,
                                 color: AppConfig.primaryGreen,
                                 fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        _HoldStatus(
+                          item: item,
+                          onRenew: () => cart.renew(item.deal.id),
+                        ),
                       ],
                     ),
                   ),
@@ -113,14 +138,16 @@ class CartScreen extends GetView<CartController> {
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () => cart.decrement(item.deal.id),
+                        onPressed:
+                            busy ? null : () => cart.decrement(item.deal.id),
                       ),
                       Text('${item.quantity}',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () => cart.add(item.deal),
+                        onPressed:
+                            busy || expired ? null : () => cart.add(item.deal),
                       ),
                     ],
                   ),
@@ -171,5 +198,56 @@ class _ExpiredNotices extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// "Reserving…", a live "Held for mm:ss" (orange in the last minute), or
+/// "Hold expired" with a Re-reserve action.
+class _HoldStatus extends StatelessWidget {
+  final CartItemModel item;
+  final VoidCallback onRenew;
+
+  const _HoldStatus({required this.item, required this.onRenew});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (item.status) {
+      case HoldStatus.reserving:
+        return Text('Reserving…',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600));
+      case HoldStatus.expired:
+        return Row(
+          children: [
+            Text('Hold expired',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red.shade700)),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: onRenew,
+              child: const Text('Re-reserve',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppConfig.primaryGreen,
+                      decoration: TextDecoration.underline)),
+            ),
+          ],
+        );
+      case HoldStatus.held:
+        final expiresAt = item.reservation!.expiresAt;
+        final clock = Get.find<ClockService>();
+        return Obx(() {
+          final left = expiresAt.difference(clock.now.value);
+          final warn = left < const Duration(minutes: 1);
+          return Text('Held for ${formatCountdown(left)}',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: warn ? FontWeight.w600 : FontWeight.normal,
+                  color: warn ? Colors.orange.shade800 : Colors.grey.shade600,
+                  fontFeatures: const [FontFeature.tabularFigures()]));
+        });
+    }
   }
 }

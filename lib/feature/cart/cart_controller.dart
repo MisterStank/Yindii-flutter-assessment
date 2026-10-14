@@ -21,7 +21,7 @@ class CartController extends GetxController {
 
   Future<void> checkout() async {
     cartService.expireOverdue();
-    if (cartService.items.isEmpty || isCheckingOut.value) return;
+    if (!cartService.canCheckout || isCheckingOut.value) return;
     isCheckingOut.value = true;
     try {
       final order = await orderRepo.checkout(cartService.items.toList());
@@ -33,11 +33,21 @@ class CartController extends GetxController {
       );
     } on ApiException catch (e) {
       LogService.error('checkout failed', e);
-      Get.snackbar(
-        'Checkout failed',
-        e.message,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (e.statusCode == 410) {
+        cartService.markHoldsRejected();
+        Get.snackbar(
+          'Some items are no longer held',
+          'Re-reserve the highlighted items to check out. '
+              'You have not been charged.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Checkout failed',
+          e.message,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
     isCheckingOut.value = false;
   }
