@@ -25,6 +25,8 @@ class DealDetailsController extends GetxController {
 
   final loadFailed = false.obs;
 
+  late final Worker _cartWorker;
+
   final _quantityLeft = RxnInt();
   int? get quantityLeft => _quantityLeft.value;
 
@@ -45,7 +47,15 @@ class DealDetailsController extends GetxController {
     });
     // Whenever the cart changes, re-check this deal's remaining stock so the
     // details screen never shows stale availability.
-    ever(cartService.itemCount, (_) => _recheckAvailability());
+    _cartWorker = ever(cartService.itemCount, (_) => _recheckAvailability());
+  }
+
+  @override
+  void onClose() {
+    // CartService outlives this controller, so the subscription must be
+    // cancelled explicitly.
+    _cartWorker.dispose();
+    super.onClose();
   }
 
   Future<void> loadDeal() async {
