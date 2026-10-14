@@ -28,10 +28,10 @@ Future<void> initDependencies() async {
   // Default is 500ms; 100ms keeps the 1s impression window accurate to ~0.1s.
   VisibilityDetectorController.instance.updateInterval =
       const Duration(milliseconds: 100);
-  Get.put(CartService(), permanent: true);
   Get.lazyPut(() => DealRepo(api: Get.find()), fenix: true);
   Get.lazyPut(() => StoreRepo(api: Get.find()), fenix: true);
   Get.lazyPut(() => OrderRepo(api: Get.find()), fenix: true);
+  Get.put(CartService(orderRepo: Get.find()), permanent: true);
 }
 
 class RescuApp extends StatelessWidget {
