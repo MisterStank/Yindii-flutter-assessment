@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../../model/deal_model.dart';
@@ -9,14 +11,18 @@ class SearchDealsController extends GetxController {
 
   SearchDealsController({required this.dealRepo});
 
+  static const debounceDuration = Duration(milliseconds: 300);
+
   final results = <DealModel>[].obs;
   final isLoading = false.obs;
   final hasSearched = false.obs;
 
+  Timer? _debounce;
   int _latestRequest = 0;
 
   void onQueryChanged(String query) {
-    search(query);
+    _debounce?.cancel();
+    _debounce = Timer(debounceDuration, () => search(query));
   }
 
   Future<void> search(String query) async {
@@ -39,5 +45,11 @@ class SearchDealsController extends GetxController {
       LogService.error('search failed', e);
     }
     isLoading.value = false;
+  }
+
+  @override
+  void onClose() {
+    _debounce?.cancel();
+    super.onClose();
   }
 }
