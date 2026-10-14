@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app_config.dart';
+import '../../service/cart_service.dart';
 import '../shared_widget/the_network_image.dart';
 import 'cart_controller.dart';
 
@@ -13,76 +14,17 @@ class CartScreen extends GetView<CartController> {
     final cart = controller.cartService;
     return Scaffold(
       appBar: AppBar(title: const Text('My bag')),
-      body: Obx(() {
-        if (cart.items.isEmpty) {
-          return const Center(child: Text('Your bag is empty'));
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: cart.items.length,
-          itemBuilder: (context, index) {
-            final item = cart.items[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: Colors.white,
-              elevation: 0.5,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    TheNetworkImage(
-                      url: item.deal.imageUrl,
-                      width: 64,
-                      height: 64,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(item.deal.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w600)),
-                          Text(item.deal.storeName,
-                              style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: Colors.grey.shade600)),
-                          Text('฿${item.deal.price.toStringAsFixed(0)} each',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppConfig.primaryGreen,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.remove_circle_outline),
-                          onPressed: () => cart.decrement(item.deal.id),
-                        ),
-                        Text('${item.quantity}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold)),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.add_circle_outline),
-                          onPressed: () => cart.add(item.deal),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      }),
+      body: Column(
+        children: [
+          Obx(() => cart.expiredNotices.isEmpty
+              ? const SizedBox.shrink()
+              : _ExpiredNotices(
+                  messages: cart.expiredNotices.toList(),
+                  onDismiss: cart.dismissExpiredNotices,
+                )),
+          Expanded(child: _buildItems(cart)),
+        ],
+      ),
       bottomNavigationBar: Obx(() {
         if (cart.items.isEmpty) return const SizedBox.shrink();
         return Container(
@@ -118,6 +60,116 @@ class CartScreen extends GetView<CartController> {
           ),
         );
       }),
+    );
+  }
+
+  Widget _buildItems(CartService cart) {
+    return Obx(() {
+      if (cart.items.isEmpty) {
+        return const Center(child: Text('Your bag is empty'));
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: cart.items.length,
+        itemBuilder: (context, index) {
+          final item = cart.items[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: Colors.white,
+            elevation: 0.5,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  TheNetworkImage(
+                    url: item.deal.imageUrl,
+                    width: 64,
+                    height: 64,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.deal.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 14.5, fontWeight: FontWeight.w600)),
+                        Text(item.deal.storeName,
+                            style: TextStyle(
+                                fontSize: 12.5, color: Colors.grey.shade600)),
+                        Text('฿${item.deal.price.toStringAsFixed(0)} each',
+                            style: const TextStyle(
+                                fontSize: 13,
+                                color: AppConfig.primaryGreen,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: () => cart.decrement(item.deal.id),
+                      ),
+                      Text('${item.quantity}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: () => cart.add(item.deal),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    });
+  }
+}
+
+class _ExpiredNotices extends StatelessWidget {
+  final List<String> messages;
+  final VoidCallback onDismiss;
+
+  const _ExpiredNotices({required this.messages, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Icon(Icons.timer_off_outlined,
+                size: 20, color: Colors.orange.shade800),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(messages.join('\n'),
+                  style: const TextStyle(fontSize: 13)),
+            ),
+          ),
+          TextButton(onPressed: onDismiss, child: const Text('Dismiss')),
+        ],
+      ),
     );
   }
 }
