@@ -15,7 +15,10 @@ class HomeController extends GetxController {
   final flashDeals = <DealModel>[].obs;
   final isLoading = true.obs;
   final todayOnly = false.obs;
-  final scrollOffset = 0.0.obs;
+  // Derived from the scroll offset; Rx only notifies when the value changes,
+  // so these update on threshold crossings rather than every scrolled pixel.
+  final isScrolled = false.obs;
+  final showScrollToTop = false.obs;
 
   final scrollController = ScrollController();
   final refreshController = RefreshController();
@@ -40,7 +43,9 @@ class HomeController extends GetxController {
   }
 
   void _onScroll() {
-    scrollOffset.value = scrollController.offset;
+    final offset = scrollController.offset;
+    isScrolled.value = offset > 4;
+    showScrollToTop.value = offset > 800;
   }
 
   Future<void> _initialLoad() async {
