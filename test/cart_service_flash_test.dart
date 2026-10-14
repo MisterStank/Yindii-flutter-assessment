@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rescu/model/deal_model.dart';
 import 'package:rescu/service/cart_service.dart';
 
+import 'fakes/fake_order_repo.dart';
+
 DealModel _deal(int id, {Duration? flashEndsIn}) => DealModel.fromJson({
       'id': id,
       'name': 'Deal $id',
@@ -21,7 +23,10 @@ void main() {
 
   setUp(() {
     notified = [];
-    cart = CartService(notify: (title, message) => notified.add(message));
+    cart = CartService(
+      orderRepo: FakeOrderRepo(autoReserve: true),
+      notify: (title, message) => notified.add(message),
+    );
   });
 
   // testWidgets runs in a fake-async zone, so pump() advances Timers.
@@ -37,6 +42,7 @@ void main() {
     expect(cart.itemCount.value, 1);
     expect(cart.expiredNotices, hasLength(1));
     expect(notified, hasLength(1));
+    cart.onClose(); // cancel deal 2's hold timer before the test ends
   });
 
   testWidgets('no notice for a flash line removed before it expires',
