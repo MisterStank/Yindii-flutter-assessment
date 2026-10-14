@@ -23,6 +23,8 @@ class HomeController extends GetxController {
   int _page = 1;
   int _totalPages = 1;
   bool _isFetchingMore = false;
+  // Bumped by every refresh; page loads started before it are discarded.
+  int _generation = 0;
 
   bool get hasMore => _page < _totalPages;
 
@@ -56,8 +58,11 @@ class HomeController extends GetxController {
   }
 
   Future<void> refreshDeals() async {
-    _page = 1;
+    final generation = ++_generation;
+    _isFetchingMore = false;
     final res = await dealRepo.fetchDeals(page: 1);
+    if (generation != _generation) return;
+    _page = 1;
     _totalPages = res.totalPages;
     deals.assignAll(res.items);
     refreshController.refreshCompleted();
@@ -70,14 +75,17 @@ class HomeController extends GetxController {
       return;
     }
     _isFetchingMore = true;
-    _page++;
+    final generation = _generation;
+    final nextPage = _page + 1;
     try {
-      final res = await dealRepo.fetchDeals(page: _page);
+      final res = await dealRepo.fetchDeals(page: nextPage);
+      if (generation != _generation) return;
+      _page = nextPage;
       _totalPages = res.totalPages;
       deals.addAll(res.items);
     } catch (e) {
+      if (generation != _generation) return;
       LogService.error('loadMore failed', e);
-      _page--;
     }
     _isFetchingMore = false;
     refreshController.loadComplete();
