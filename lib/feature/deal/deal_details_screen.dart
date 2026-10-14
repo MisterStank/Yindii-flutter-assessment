@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app_config.dart';
+import '../../model/deal_model.dart';
+import '../../routes/routes.dart';
 import '../shared_widget/the_network_image.dart';
 import 'deal_details_controller.dart';
 
@@ -10,11 +12,47 @@ class DealDetailsScreen extends GetView<DealDetailsController> {
 
   @override
   Widget build(BuildContext context) {
-    final deal = controller.deal;
+    // A cold-start deep link has no route below it; go Home instead of exiting.
+    final isFirstRoute = ModalRoute.of(context)?.isFirst ?? false;
+    final leading = isFirstRoute ? BackButton(onPressed: _goHome) : null;
+    return PopScope(
+      canPop: !isFirstRoute,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _goHome();
+      },
+      child: Obx(() {
+        final deal = controller.deal;
+        if (deal != null) return _buildDeal(deal, leading);
+        return Scaffold(
+          appBar: AppBar(leading: leading),
+          body: Center(
+            child: controller.loadFailed.value
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text("Couldn't load this deal"),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: controller.loadDeal,
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                  )
+                : const CircularProgressIndicator(),
+          ),
+        );
+      }),
+    );
+  }
+
+  void _goHome() => Get.offAllNamed(Routes.home);
+
+  Widget _buildDeal(DealModel deal, Widget? leading) {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            leading: leading,
             expandedHeight: 240,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
@@ -33,11 +71,11 @@ class DealDetailsScreen extends GetView<DealDetailsController> {
                           fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(deal.storeName,
-                      style: TextStyle(
-                          fontSize: 15, color: Colors.grey.shade700)),
+                      style:
+                          TextStyle(fontSize: 15, color: Colors.grey.shade700)),
                   Text(deal.storeAddress,
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey.shade500)),
+                      style:
+                          TextStyle(fontSize: 13, color: Colors.grey.shade500)),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -56,7 +94,8 @@ class DealDetailsScreen extends GetView<DealDetailsController> {
                       Obx(() => Chip(
                             avatar: const Icon(Icons.inventory_2_outlined,
                                 size: 16),
-                            label: Text('${controller.quantityLeft ?? '-'} left'),
+                            label:
+                                Text('${controller.quantityLeft ?? '-'} left'),
                           )),
                     ],
                   ),
@@ -98,8 +137,8 @@ class DealDetailsScreen extends GetView<DealDetailsController> {
                   ),
                   const SizedBox(height: 16),
                   const Text('What you get',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   Text(deal.description,
                       style: TextStyle(
