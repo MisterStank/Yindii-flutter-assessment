@@ -77,32 +77,7 @@ class HomeScreen extends GetView<HomeController> {
               enablePullUp: true,
               onRefresh: controller.refreshDeals,
               onLoading: controller.loadMore,
-              child: ListView(
-                controller: controller.scrollController,
-                children: [
-                  if (controller.flashDeals.isNotEmpty)
-                    FlashDealsSection(deals: controller.flashDeals),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Row(
-                      children: [
-                        const Text('Nearby deals',
-                            style: TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.bold)),
-                        const Spacer(),
-                        FilterChip(
-                          label: const Text('Pickup today'),
-                          selected: controller.todayOnly.value,
-                          onSelected: (v) => controller.todayOnly.value = v,
-                        ),
-                      ],
-                    ),
-                  ),
-                  ...controller.visibleDeals
-                      .map((deal) => DealCard(deal: deal)),
-                  const SizedBox(height: 24),
-                ],
-              ),
+              child: _buildFeed(),
             )),
       floatingActionButton: Obx(() => controller.showScrollToTop.value
           ? FloatingActionButton.small(
@@ -110,6 +85,46 @@ class HomeScreen extends GetView<HomeController> {
               child: const Icon(Icons.arrow_upward),
             )
           : const SizedBox.shrink()),
+    );
+  }
+
+  /// Lazily builds only the visible rows: flash rail, header, deals, spacer.
+  Widget _buildFeed() {
+    final deals = controller.visibleDeals;
+    final hasFlash = controller.flashDeals.isNotEmpty;
+    final headerCount = hasFlash ? 2 : 1;
+    return ListView.builder(
+      controller: controller.scrollController,
+      itemCount: headerCount + deals.length + 1,
+      itemBuilder: (context, index) {
+        if (hasFlash && index == 0) {
+          return FlashDealsSection(deals: controller.flashDeals);
+        }
+        if (index == headerCount - 1) return _buildFeedHeader();
+        if (index == headerCount + deals.length) {
+          return const SizedBox(height: 24);
+        }
+        final deal = deals[index - headerCount];
+        return DealCard(key: ValueKey(deal.id), deal: deal);
+      },
+    );
+  }
+
+  Widget _buildFeedHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        children: [
+          const Text('Nearby deals',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const Spacer(),
+          FilterChip(
+            label: const Text('Pickup today'),
+            selected: controller.todayOnly.value,
+            onSelected: (v) => controller.todayOnly.value = v,
+          ),
+        ],
+      ),
     );
   }
 
