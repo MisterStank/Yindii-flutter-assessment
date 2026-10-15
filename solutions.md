@@ -523,13 +523,21 @@ screen, including every visible card, on every scroll frame. My rules:
 
 ## Time spent
 
-<!-- TODO(candidate): replace with your own honest numbers. -->
+Elapsed time over two days (14–15 Oct), taken from the session log and
+commit timestamps. Implementation was AI-assisted (see the AI usage log),
+so this is much less than the same work would take by hand.
 
+- **Reading the brief and planning:** about 45 minutes, deciding scope,
+  order and the product questions before writing code.
 - **Setup:** about 3 hours, mostly downloading Flutter 3.27.0 over a slow
   connection and the first Gradle build.
-- **Bugs RES-101…107:** about X hours.
-- **F-1…F-3:** about X hours.
-- **Write-up:** about X hours.
+- **Bugs RES-101…107:** about 2.5 hours, including reproducing each bug and
+  emulator checks.
+- **F-1…F-3:** about 1.5 hours, including emulator checks.
+- **Write-up and evidence:** about 30 minutes.
+- **Reviewing the code before submitting:** about 1 hour.
+
+**Total:** about 9 hours.
 
 **With one more day I would:**
 - Persist the bag and its reservation ids across app restarts, re-checking
